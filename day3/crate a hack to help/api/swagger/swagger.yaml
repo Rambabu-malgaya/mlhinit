@@ -1,0 +1,389 @@
+swagger: "2.0"
+info:
+  version: "1.1.0"
+  title: AA-Mock-Engine
+# basePath prefixes all resource paths
+basePath: /
+# Uncomment for local dev:
+# host: localhost:3030
+schemes:
+  # Uncomment for local dev:
+  # - http
+  - https
+# format of bodies a client can send (Content-Type)
+consumes:
+  - application/json
+  - application/octet-stream
+# format of the responses to the client (Accepts)
+produces:
+  - application/json
+paths:
+  /createMockData:
+    x-swagger-router-controller: createMockData
+    post:
+      description: Populates the DB with mock data. Defaults to today ±15 days, if one param is supplied, the other will be initialized with a difference of 30 days.
+      tags:
+        - Mock
+      consumes:
+        - application/json
+      operationId: createMockData
+      parameters:
+        - in: body
+          name: Mock Data Range
+          description: A date range for which mock data should be created (YYYY-MM-DD)
+          schema:
+            type: object
+            properties:
+              startDate:
+                description: Start date of mock data (e.g., YYYY-MM-DD)
+                type: string
+                format: date
+              endDate:
+                description: End date of mock data (e.g., YYYY-MM-DD)
+                type: string
+                format: date
+      responses:
+        "200":
+          description: Success
+          schema:
+            type: string
+        "400":
+          description: Malformed date values
+          schema:
+            type: string
+        "500":
+          description: Error populating DB
+          schema:
+            type: string
+  /user:
+    x-swagger-router-controller: user
+    get:
+      description: Returns a user object matching the specified information
+      tags:
+        - User
+      operationId: user
+      parameters:
+        - name: email
+          in: query
+          description: Email address
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: "#/definitions/User"
+        "404":
+          description: User not found
+          schema:
+            type: string
+        "500":
+          description: Error retrieving user
+          schema:
+            type: string
+    post:
+      description: Creates a user object with the specified data
+      tags:
+        - User
+      consumes:
+        - application/json
+      operationId: createUser
+      parameters:
+        - in: body
+          name: New User Object
+          description: The user object
+          schema:
+            type: object
+            properties:
+              firstName:
+                description: First name
+                type: string
+              lastName:
+                description: Last name
+                type: string
+              email:
+                description: Email address
+                type: string
+              gender:
+                description: Gender
+                type: string
+                enum: ["Male", "Female", "Other"]
+              aadvantageNumber:
+                description: AAdvantage number
+                type: string
+      responses:
+        "200":
+          description: User created
+          schema:
+            $ref: "#/definitions/User"
+        "500":
+          description: Error creating user
+          schema:
+            type: string
+  /reservation:
+    x-swagger-router-controller: reservation
+    get:
+      description: Returns a reservation matching the specified record locator
+      tags:
+        - Reservation
+      operationId: reservation
+      parameters:
+        - name: recordLocator
+          in: query
+          description: "6 character string for the desired reservation"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Success
+          schema:
+            # a pointer to a definition
+            $ref: "#/definitions/Reservation"
+        "404":
+          description: Reservation not found
+          schema:
+            type: string
+        "500":
+            description: Error retrieving reservation
+            schema:
+              type: string
+    post:
+      description: Creates a reservation with the specified data
+      tags:
+        - Reservation
+      operationId: createReservation
+      parameters:
+      - name: userId
+        in: query
+        description: User ID (MongoDB _id)
+        required: true
+        type: string
+      - name: flightIds
+        in: query
+        description: An array of Flight IDs (MongoDB _id)
+        required: true
+        type: array
+        items:
+          type: string
+      responses:
+        "200":
+          description: Reservation created
+          schema:
+            $ref: "#/definitions/Reservation"
+        "500":
+          description: Error creating reservation
+          schema:
+            type: string
+  /flight:
+    x-swagger-router-controller: flight
+    get:
+      description: Returns a flight matching the specified flight number
+      tags:
+          - Flight
+      operationId: flight
+      parameters:
+          - name: flightNumber
+            in: query
+            description: "Flight number for the desired flight"
+            required: true
+            type: string
+          - name: date
+            in: query
+            description: "Departure date for the desired flight (e.g., \"2018-03-01\")"
+            required: true
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Success
+          schema:
+            # a pointer to a definition
+            $ref: "#/definitions/FlightSegment"
+        "404":
+          description: Flight not found
+          schema:
+            type: string
+        "500":
+            description: Error retrieving flight
+            schema:
+              type: string
+  /flights:
+    x-swagger-router-controller: flight
+    get:
+      operationId: flights
+      tags:
+          - Flight
+      parameters:
+        - name: origin
+          in: query
+          description: "Airport code for origin"
+          type: string
+          enum: ["DFW", "LAX", "MIA", "PHL", "ORD", "JFK", "LHR", "HKG"]
+        - name: destination
+          in: query
+          description: "Airport code for destination"
+          type: string
+          enum: ["DFW", "LAX", "MIA", "PHL", "ORD", "JFK", "LHR", "HKG"]
+        - name: date
+          in: query
+          description: "Departure date (origin) for the desired flight (e.g., \"2018-03-01\")"
+          required: true
+          type: string
+          format: date
+      responses:
+        "200":
+          description: Success
+          schema:
+            # a pointer to a definition
+            type: array
+            items:
+              $ref: "#/definitions/FlightSegment"
+        "500":
+          description: Error retrieving flights
+          schema:
+            type: string
+  /flightStatus:
+    x-swagger-router-controller: flight
+    post:
+      operationId: setFlightStatus
+      tags:
+        - Flight
+      parameters:
+        - name: flightId
+          in: query
+          description: "Flight ID (MongoDB _id) for the desired flight"
+          required: true
+          type: string
+        - name: flightStatus
+          in: query
+          description: "New flight status for the desired flight"
+          required: true
+          type: string
+          default: "On-Time"
+          enum: ["On-Time", "Delayed", "Cancelled"]
+      responses:
+        "200":
+          description: Success
+          schema:
+            type: string
+        "404":
+          description: Flight not found
+          schema:
+            type: string
+        "500":
+          description: Error retrieving flight status
+          schema:
+            type: string
+  /airports:
+    x-swagger-router-controller: airport
+    get:
+      operationId: airports
+      tags:
+        - Airport
+      parameters:
+      - name: code
+        in: query
+        description: Airport code
+        required: false
+        type: string
+      responses:
+        "200":
+          description: Success
+          schema:
+            # a pointer to a definition
+            type: array
+            items:
+              $ref: "#/definitions/Airport"
+        "500":
+          description: Error retrieving airports
+          schema:
+            type: string
+  /docs:
+    x-swagger-pipe: swagger_raw
+# complex objects have schema definitions
+definitions:
+  User:
+    required:
+      - firstName
+      - lastName
+      - gender
+      - email
+    properties:
+      firstName:
+        type: string
+      lastName:
+        type: string
+      gender:
+        $ref: "#/definitions/Gender"
+      email:
+        type: string
+      aadvantageId:
+        type: string
+      id:
+        type: string
+  Reservation:
+    required:
+      - recordLocator
+    properties:
+      firstName:
+        type: string
+      lastName:
+        type: string
+      recordLocator:
+        type: string
+      flights:
+        type: array
+        items:
+          $ref: "#/definitions/FlightSegment"
+  FlightSegment:
+    properties:
+      cost:
+        type: number
+      flightNumber:
+        type: string
+      originCode:
+        type: string
+      # originCity:
+      #   type: string
+      destinationCode:
+        type: string
+      # destinationCity:
+      #   type: string
+      estimatedDepartureTime:
+        type: string
+      scheduledDepartureTime:
+        type: string
+      estimatedArrivalTime:
+        type: string
+      scheduledArrivalTime:
+        type: string
+  Airport:
+    required:
+      - code
+    properties:
+      id:
+        type: string
+      code:
+        type: string
+      name:
+        type: string
+      city:
+        type: string
+      stateCode:
+        type: string
+      countryName:
+        type: string
+      countryCode:
+        type: string
+      longitude:
+        type: number
+      latitude:
+        type: number
+      admiralsClubUrl:
+        type: string
+  Gender:
+    type: string
+    enum:
+      - Male
+      - Female
+      - Other
