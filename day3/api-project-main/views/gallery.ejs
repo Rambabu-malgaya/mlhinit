@@ -1,0 +1,87 @@
+<div id="gallery-container">
+    <div class="left-text">
+        <h2>Detected tags from your image</h2>
+        <div id="tags">
+            <% tags.forEach(tag => { %>
+            <li class="color_tags"><%= tag %></li>
+            <% }); %>
+        </div>
+        <h2>Similar images from Unsplash</h2>
+    </div>
+    <div id="photos">
+        <% images.forEach(image => { %>
+        <img class="gallery-image" src="<%= image.thumb %>" />
+        <% }) %>
+    </div>
+</div>
+<script>
+    $('.upload-section').remove()
+    var count = 1
+    var scrolled = false
+    $(window).scroll(function (e) {
+        if (
+            !scrolled &&
+            $(window).scrollTop() == $(document).height() - $(window).height()
+        ) {
+            if (!scrolled) {
+                scrolled = true
+                count += 1
+                console.log(count)
+                if (count <= 4) {
+                    const getImages = () => {
+                        $.ajax({
+                            method: 'GET',
+                            url: `/galleryLoad/${count}`,
+                            success: function (data) {
+                                if (!data) {
+                                    $('#gallery-container').append(
+                                        '<p>You reached end!</p>'
+                                    )
+                                }
+                            }
+                        }).done((res) => {
+                            const images = res.images
+                            if (images) {
+                                images.forEach((image) => {
+                                    $('#photos').append(
+                                        `<img class="gallery-image" src="${image.thumb}" />`
+                                    )
+                                })
+                            } else {
+                                $('#gallery-container').append(
+                                    '<p>You reached end!</p>'
+                                )
+                            }
+                        })
+                    }
+                    getImages()
+                } else {
+                    $('#gallery-container').append('<p>You reached end!</p>')
+                }
+                setTimeout(() => {
+                    scrolled = false
+                }, 500)
+            }
+        }
+    })
+
+    $('.color_tags').on('click', (e) => {
+        $('html, body').animate({ scrollTop: 0 }, 'slow')
+        e.preventDefault()
+        $.ajax({
+            method: 'GET',
+            url: `/gallery/${e.target.innerHTML}`,
+            beforeSend: () => {
+                $('.loader-wrapper').fadeIn('fast')
+            },
+            success: function (data) {
+                $('.loader-wrapper').fadeOut('slow')
+                if (!data) {
+                    $('#content').html('Opps! Something went wrong :/')
+                }
+            }
+        }).done((res) => {
+            $('#content').html(res)
+        })
+    })
+</script>
